@@ -1,0 +1,98 @@
+---
+title: "alz_data"
+author: "Apoorva Srinivasan"
+date: "12/30/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+
+Inputting the .da file into R is rather complicated and time consuming.(https://stackoverflow.com/questions/45109400/how-can-i-read-a-da-file-directly-into-r). Some initial attempts proved to be unfruitful. Hence, the .da file was inputted to SPSS to obtain the  csv which was then inputted into R for analysis.
+
+
+```{r}
+
+##loading data from csv file obtained from SPSS
+trackr_df = read_csv("trackr_data.csv") 
+
+
+#concatenating HHID and PN into a variable called HHIDPN
+
+trackr_df$HHIDPN = paste(trackr_df$HHID, trackr_df$PN)
+
+
+
+```
+
+### 4.	The Tracker data file is in wide format. Reshape the data to a tall/long/vertical format with a person-specific ID variable and a wave number variable (hint: the data set includes a lot of variables, you do not need to keep all the variables in the data set before you reshape it from wide to long). 
+
+```{r}
+
+##first separating out the age variable to test
+
+wide_df = trackr_df %>%
+  dplyr::select(HHIDPN, BIRTHYR, ends_with("AGE"), ends_with("ALIVE"), ends_with("BIOWGTR"), ends_with("COUPID"), ends_with("COUPLE"), ends_with("FAMR"), ends_with("FINR"), ends_with("INSAMP"))
+
+
+
+##reshaping into long form.
+
+
+long_df = 
+  pivot_longer(
+    wide_df,
+    -c(HHIDPN, BIRTHYR),
+    names_to = c("wave", ".value"),
+    names_pattern = "(.)(.*)"
+  ) %>%
+  mutate(wave = as.factor(wave))
+
+
+
+```
+
+There are about 40 wave specific variables in the given dataset, they would each have to be called out indiviually since all of the variables in the dataset and characters. In this example, 8 have been demostrated. The others can be called in similar fashion.
+
+
+
+### a.	The total number of people who participated in the 1998 interview wave.
+
+```{r}
+length(unique(long_df$HHIDPN[which(long_df$wave == "F")]))
+```
+
+There are 43216 HRS panel members in 1998 interview wave. Just looking at unique person number(PN) in 1998 wave, then we have 16.
+
+
+### b.	Median, min, and max birth year of everyone who participated in the 1998 interview wave (birth year variable = birthyr).
+
+```{r}
+summary(long_df$BIRTHYR[which(long_df$wave == "F")])
+```
+
+The median birthyear who had their age recorded of everyone who participated in 1998 inteview wave was 1940 and the maximum was 1999 and the minimum was 0 which is strange. 
+
+### c.	Median, min, and max number of waves of data for everyone who participated in the 1998 interview wave.
+
+```{r}
+long_df %>%
+  filter(wave == "F") %>%
+  summary()
+```
+
+
+
+```{r}
+
+##exporting long dataframe into csv
+write.csv(long_df, "long_df.csv")
+```
+
+
+
+
